@@ -1,109 +1,120 @@
-# F1 Car Telemetry Overlay for FanCode 🏎️💨
+# F1 Car Telemetry & Pit Wall Overlay for FanCode 🏎️💨
 
-A modern Manifest V3 browser extension that brings **real-time Formula 1 car telemetry** directly onto your **FanCode** video player.
+A professional Formula 1 broadcast telemetry overlay and pit wall extension for **FanCode**, powered by the **OpenF1 API**.
 
-Powered by the **OpenF1 API**, this extension renders an authentic F1 broadcast-style floating HUD featuring digital speedometer, gear indicator, 15-LED RPM shift lights, live throttle/brake gauges, DRS activation badge, and team-colored driver badging.
+Brings real-time car telemetry, an **interactive circuit track minimap**, **dual-driver comparison mode**, and a **live Grand Prix event countdown** directly onto your FanCode video player.
 
 ---
 
 ## 🌟 Key Features
 
-1. **Broadcast-Grade F1 HUD**:
-   - **Speedometer**: Digital km/h display with high-contrast racing typography.
-   - **Gear Indicator**: Current gear (1–8, N).
-   - **15-LED RPM Shift Lights**: Green $\rightarrow$ Red $\rightarrow$ Electric Blue rev counter lights.
-   - **Pedal Inputs**: Vertical glowing bars for Throttle (0–100%) and Brake (0–100%).
-   - **DRS Status**: Real-time DRS badge (`DRS OFF`, `DRS AVAIL`, `DRS ACTIVE`).
+### 1. 🗺️ Live Circuit Track Minimap
+* **Real-time GPS Tracking**: Follows cars around the official Grand Prix track layout (Austin COTA, Silverstone, Monza, Spa, etc.).
+* **Dynamic Driver Markers**: Glowing car dots styled with official team colors and driver numbers (e.g. Papaya `#1 NOR`, Red Bull Blue `#3 VER`).
+* **Collapsible Map View**: Click the **`🗺️`** icon in the header to expand or collapse the minimap above the telemetry data anytime.
 
-2. **Driver Switcher & Team Styling**:
-   - Click the driver badge to open the session lineup.
-   - Automatically adopts official team colors (McLaren Papaya, Ferrari Red, Red Bull Blue, Mercedes Cyan, etc.).
-   - Displays driver numbers and 3-letter acronyms (e.g. `1 VER`, `4 NOR`, `16 LEC`, `44 HAM`).
+### 2. ⚔️ Dual-Driver Comparison Mode
+* **"⚔️ Compare" Button**: Click **`⚔️ Compare`** to instantly spawn a **Second Independent HUD** for Driver 2 (e.g. Verstappen vs. Norris).
+* **Both Cars on One Track Map**: View both drivers battling simultaneously on the circuit to see the physical gap between them into braking zones.
+* **Live Speed Delta**: Real-time comparison badge (**`Δ +14 KM/H`** / **`Δ -14 KM/H`**) showing who is carrying more speed through straights and corners.
+* **Independent Dragging**: Move each driver's HUD anywhere on screen (e.g. Verstappen Top-Left, Norris Top-Right, or docked side-by-side).
+* **One-Click Exit**: Click **`✕ Close`** on HUD 2 to return to single-driver mode.
 
-3. **Draggable & Dockable Screen Positioning**:
-   - **Free Drag**: Grab the top header and drag the HUD anywhere on screen.
-   - **Snap Presets**: 1-click snap to **Top-Left (TL)**, **Top-Center (TC)**, **Top-Right (TR)**, **Bottom-Left (BL)**, or **Bottom-Right (BR)**.
-   - **Opacity Slider**: Control transparency (30% to 100%) so track action is never blocked.
-   - **Minimize Mode**: Collapse into a mini pill with one click.
+### 3. 🏎️ Broadcast-Grade Telemetry HUD
+* **Digital Speedometer**: Tabular `km/h` readout with racing typography.
+* **Gear Indicator**: Current gear (`1`–`8`, `N`).
+* **15-LED Shift Lights**: Realistic green $\rightarrow$ red $\rightarrow$ electric blue rev lights as the engine approaches redline.
+* **Pedal Input Gauges**: Vertical glowing bars for **Throttle (0–100%)** and **Brake (0–100%)**.
+* **DRS Badge**: Real-time DRS flap status (`DRS OFF`, `DRS AVAIL`, `DRS ACTIVE`).
+* **Driver Selector**: Switch between any driver in the session lineup with dynamic team color stripes.
 
-4. **Stream Latency Sync Offset Slider (Crucial for FanCode)**:
-   - Streaming services like FanCode typically have a 20s–45s broadcast delay behind live track timing.
-   - The HUD includes an **offset slider** (`-60s` to `+60s` with `-1s`/`+1s` precision buttons) so you can easily sync telemetry with the video broadcast once per session.
+### 4. ⏱️ Event Countdown & Weekend Schedule
+* **Next Event Auto-Detection**: Displays the next upcoming session (e.g. **United States GP - Practice 3**).
+* **Local Timezone Conversion**: Automatically converts session start times to your local timezone (e.g. `Today at 11:00 PM`).
+* **Live Ticking Countdown**: Displays remaining time down to the second (`STARTS IN: 05h 18m 42s` or `🔴 LIVE NOW`).
+* **Expandable Weekend Timetable**: Accordion menu showing all 5 weekend sessions (Practice 1, 2, 3, Qualifying, Race) with completion status.
 
-5. **Fullscreen Video Support**:
-   - Seamlessly moves with the player container when entering or exiting full-screen mode.
+### 5. 🎛️ FanCode Stream Latency Sync Offset Slider
+* Streaming services like FanCode typically run **20s to 45s behind** live track timing.
+* Includes an **offset slider** (`-60s` to `+60s` with `-1s`/`+1s` precision buttons) so you can sync telemetry gear shifts and braking points with the video broadcast once per session.
 
-6. **Offline / Demo Lap Mode**:
-   - Built-in hot lap simulation engine so you can test and enjoy the HUD anytime, even during off-race hours.
+### 6. 🖱️ Drag, Dock & Opacity Controls
+* **Free Drag**: Grab any HUD header bar to drag it anywhere across the video player.
+* **Corner Presets**: Quick-dock buttons for Top-Left (TL), Top-Center (TC), Top-Right (TR), Bottom-Left (BL), Bottom-Right (BR).
+* **Opacity Slider**: Adjust transparency (30% to 100%) so track action is never blocked.
+* **Minimize Mode**: Collapse into a compact header badge with one click.
+* **Fullscreen Support**: Automatically attaches inside HTML5 player fullscreen containers.
 
 ---
 
-## 🚀 Quick Start / How to Install
+## 🚀 Installation Guide
 
-### Step 1: Open Chrome / Edge Extension Manager
-1. Open Google Chrome, Brave, or Microsoft Edge.
-2. In the address bar, navigate to:
-   - Chrome / Brave: `chrome://extensions`
-   - Edge: `edge://extensions`
-3. Enable **Developer mode** (toggle switch in the top-right corner).
-
-### Step 2: Load Unpacked Extension
-1. Click the **"Load unpacked"** button in the top-left.
-2. Select this project folder:
+### Microsoft Edge
+1. Open Edge and navigate to:
    ```
-   /Users/kasinathreddy/Desktop/f1 car telemetry
+   edge://extensions
    ```
-3. The extension **"F1 Telemetry Overlay for FanCode"** will now appear in your browser toolbar!
+2. In the left sidebar, turn **Developer mode** toggle **ON**.
+3. Click the **"Load unpacked"** button at the top.
+4. Select the project folder:
+   ```
+   Desktop ➔ f1-telemetry-fancode
+   ```
+5. *(Recommended)* Click the **puzzle piece icon** in the Edge toolbar and click the **eye icon** next to "F1 Telemetry Overlay" to pin it to your toolbar.
+
+### Google Chrome / Brave
+1. Open Chrome or Brave and go to:
+   ```
+   chrome://extensions
+   ```
+2. Turn **Developer mode** toggle **ON** in the top-right corner.
+3. Click **"Load unpacked"** in the top-left.
+4. Select the `f1-telemetry-fancode` folder.
 
 ---
 
-## 🧪 Testing Immediately (No Race Required)
+## 🧪 Testing Immediately (No Live Race Required)
 
-You don't need to wait for a live race weekend to try it out!
+You don't need to wait for a live race weekend to try the extension!
 
-1. Simply open [`demo.html`](demo.html) directly in your browser:
-   - Double-click `demo.html` in Finder, or open it in Chrome (`file:///Users/kasinathreddy/Desktop/f1 car telemetry/demo.html`).
-2. You will see a simulated FanCode player with an onboard track view.
-3. Test:
-   - Dragging the HUD around the screen.
-   - Clicking on the driver badge to switch drivers.
-   - Clicking the ⚙ (Gear) icon to adjust the sync slider or opacity.
-   - Clicking Fullscreen (`⛶ Fullscreen`).
-   - Clicking **"Simulate Turn 1 Braking"** or **"Simulate Main Straight DRS"**.
+1. Open [`demo.html`](demo.html) directly in Microsoft Edge or Chrome:
+   - Double-click `demo.html` in Finder, or click **"Launch Interactive Demo"** from the extension popup.
+2. Experience:
+   - The car dot gliding along the Circuit of the Americas track map above the telemetry.
+   - Clicking **`⚔️ Compare`** to spawn HUD 2 and battle two cars side-by-side.
+   - Live speed delta updates and shift LED animations.
+   - Dragging both HUDs around the screen independently.
 
 ---
 
-## 📺 Using on FanCode During a Race
+## 📺 How to Use on FanCode
 
-1. Go to [FanCode](https://www.fancode.com) and start watching an F1 session (Practice, Qualifying, Sprint, or Race).
-2. The telemetry HUD will automatically appear over the video player.
-3. Select your driver of interest from the dropdown.
-4. **Syncing the stream**:
-   - Notice when the car on video shifts gear or brakes into Turn 1.
-   - If the HUD changes gear *before* the video, bump the offset slider (e.g. `+25s`) until the gear changes match the car's engine sound and visuals.
+1. Visit [FanCode](https://www.fancode.com) and start watching an F1 session.
+2. The HUD overlay will automatically appear over the video player.
+3. Select your primary driver (e.g. `1 VER`).
+4. Click **`⚔️ Compare`** if you want to track a second driver (e.g. `4 NOR`).
+5. **Sync with broadcast**:
+   - When the car shifts gear or brakes into Turn 1 on the video stream, adjust the **Sync Offset** slider so the HUD changes at the exact same moment.
 
 ---
 
-## 🛠️ Project Structure
+## 🛠️ Project Architecture
 
 ```
-f1-car-telemetry/
-├── manifest.json            # Manifest V3 configuration & permissions
-├── background.js            # Background service worker (OpenF1 API proxy & CORS handling)
-├── icons/                   # Extension icons (16, 48, 128px + SVG)
-│   ├── icon16.png
-│   ├── icon48.png
-│   ├── icon128.png
-│   └── icon.svg
+f1-telemetry-fancode/
+├── manifest.json            # Manifest V3 configuration & host permissions
+├── background.js            # Service worker proxy (bypasses CORS for OpenF1 API)
+├── icons/                   # Extension icons (16px, 48px, 128px, SVG)
 ├── content/
-│   ├── openf1.js            # OpenF1 client (sessions, drivers, car data)
-│   ├── hud.js               # HUD controller, draggable engine, interpolation & sync
-│   └── hud.css              # Broadcast aesthetics, rev shift lights & gauges
+│   ├── openf1.js            # OpenF1 client (sessions, schedule, telemetry, GPS location)
+│   ├── hud.js               # Dual HUD controller, draggable engine, circuit map SVG
+│   └── hud.css              # Broadcast aesthetics, shift lights, minimap & compare styling
 ├── popup/                   # Toolbar popup menu
-│   ├── popup.html
+│   ├── popup.html           # Event countdown, schedule accordion, dual-mode launcher
 │   ├── popup.css
 │   └── popup.js
 ├── demo.html                # Interactive testbench simulator
+├── package.py               # One-click ZIP packager for Chrome & Edge Store releases
 └── README.md
 ```
 
@@ -111,6 +122,8 @@ f1-car-telemetry/
 
 ## 🏎️ OpenF1 Endpoints Used
 
-- `GET https://api.openf1.org/v1/sessions?session_key=latest`
-- `GET https://api.openf1.org/v1/drivers?session_key={session_key}`
-- `GET https://api.openf1.org/v1/car_data?session_key={session_key}&driver_number={driver_number}&date>={timestamp}`
+* `GET https://api.openf1.org/v1/sessions?session_key=latest`
+* `GET https://api.openf1.org/v1/sessions?meeting_key={meeting_key}`
+* `GET https://api.openf1.org/v1/drivers?session_key={session_key}`
+* `GET https://api.openf1.org/v1/car_data?session_key={session_key}&driver_number={driver_number}`
+* `GET https://api.openf1.org/v1/location?session_key={session_key}&driver_number={driver_number}`
