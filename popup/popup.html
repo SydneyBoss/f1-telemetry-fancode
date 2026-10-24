@@ -47,13 +47,27 @@
       <div class="schedule-list" id="schedule-list" style="display: none;"></div>
     </div>
 
-    <!-- Active Driver -->
-    <div class="section-title">ACTIVE DRIVER</div>
+    <!-- Active Driver 1 -->
+    <div class="section-title">PRIMARY DRIVER</div>
     <div class="driver-select-container">
       <select id="driver-select">
         <option value="">Loading drivers...</option>
       </select>
     </div>
+
+    <!-- Dual Driver Comparison Mode -->
+    <div class="section-title">
+      <span>DUAL DRIVER COMPARISON</span>
+      <span class="offset-badge" id="compare-badge">OFF</span>
+    </div>
+    <div class="driver-select-container" style="margin-bottom: 8px;">
+      <select id="compare-driver-select">
+        <option value="">Select 2nd driver to compare...</option>
+      </select>
+    </div>
+    <button class="action-btn" id="btn-toggle-compare" style="margin-bottom: 14px; background: rgba(255, 145, 0, 0.15); border-color: rgba(255, 145, 0, 0.4); color: #ff9100; font-weight: 800;">
+      ⚔️ Toggle Dual HUD Comparison
+    </button>
 
     <!-- Stream Delay Sync Offset -->
     <div class="section-title">

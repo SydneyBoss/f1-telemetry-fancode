@@ -126,6 +126,19 @@ window.OpenF1Client = (function () {
     },
 
     /**
+     * Get real-time GPS track coordinate locations for a driver
+     */
+    async getRecentLocation(sessionKey, driverNumber, secondsBack = 12) {
+      const now = new Date();
+      const past = new Date(now.getTime() - secondsBack * 1000);
+      return await apiRequest('location', {
+        session_key: sessionKey,
+        driver_number: driverNumber,
+        'date>=': past.toISOString()
+      });
+    },
+
+    /**
      * Get all sessions for a specific Grand Prix weekend meeting
      */
     async getMeetingSessions(meetingKey) {

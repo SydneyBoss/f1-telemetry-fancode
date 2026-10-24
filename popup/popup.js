@@ -12,6 +12,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const accordionArrow = document.getElementById('accordion-arrow');
   const scheduleList = document.getElementById('schedule-list');
   const driverSelect = document.getElementById('driver-select');
+  const compareDriverSelect = document.getElementById('compare-driver-select');
+  const btnToggleCompare = document.getElementById('btn-toggle-compare');
+  const compareBadge = document.getElementById('compare-badge');
   const syncSlider = document.getElementById('sync-slider');
   const offsetDisplay = document.getElementById('offset-display');
   const btnSub5 = document.getElementById('btn-sub-5');
@@ -81,16 +84,33 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Load Drivers for active session
       const drivers = await window.OpenF1Client.getDrivers(active.session_key);
       driverSelect.innerHTML = '';
+      if (compareDriverSelect) compareDriverSelect.innerHTML = '';
 
-      chrome.storage.local.get(['f1_driver'], (stored) => {
-        drivers.forEach(d => {
-          const opt = document.createElement('option');
-          opt.value = d.number;
-          opt.textContent = `#${d.number} ${d.code} - ${d.name} (${d.team})`;
+      chrome.storage.local.get(['f1_driver', 'f1_compare_driver', 'f1_compare_mode'], (stored) => {
+        if (stored.f1_compare_mode) {
+          compareBadge.textContent = 'ON';
+          compareBadge.style.background = 'rgba(255, 145, 0, 0.25)';
+          compareBadge.style.color = '#ff9100';
+        }
+
+        drivers.forEach((d, i) => {
+          const opt1 = document.createElement('option');
+          opt1.value = d.number;
+          opt1.textContent = `#${d.number} ${d.code} - ${d.name} (${d.team})`;
           if (stored.f1_driver && stored.f1_driver === d.number) {
-            opt.selected = true;
+            opt1.selected = true;
           }
-          driverSelect.appendChild(opt);
+          driverSelect.appendChild(opt1);
+
+          if (compareDriverSelect) {
+            const opt2 = document.createElement('option');
+            opt2.value = d.number;
+            opt2.textContent = `#${d.number} ${d.code} - ${d.name} (${d.team})`;
+            if (stored.f1_compare_driver ? stored.f1_compare_driver === d.number : i === 1) {
+              opt2.selected = true;
+            }
+            compareDriverSelect.appendChild(opt2);
+          }
         });
       });
     } else {
@@ -189,12 +209,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     sendTabMessage({ action: 'TOGGLE_HUD' });
   });
 
-  // Driver Change
+  // Driver 1 Change
   driverSelect.addEventListener('change', () => {
     const driverNum = parseInt(driverSelect.value, 10);
     chrome.storage.local.set({ f1_driver: driverNum });
     sendTabMessage({ action: 'SELECT_DRIVER', driverNumber: driverNum });
   });
+
+  // Driver 2 (Comparison) Change
+  if (compareDriverSelect) {
+    compareDriverSelect.addEventListener('change', () => {
+      const driverNum = parseInt(compareDriverSelect.value, 10);
+      chrome.storage.local.set({ f1_compare_driver: driverNum });
+      sendTabMessage({ action: 'SELECT_COMPARE_DRIVER', driverNumber: driverNum });
+    });
+  }
+
+  // Toggle Dual HUD Comparison Mode
+  if (btnToggleCompare) {
+    btnToggleCompare.addEventListener('click', () => {
+      chrome.storage.local.get(['f1_compare_mode'], (stored) => {
+        const nextState = !stored.f1_compare_mode;
+        chrome.storage.local.set({ f1_compare_mode: nextState });
+        compareBadge.textContent = nextState ? 'ON' : 'OFF';
+        compareBadge.style.background = nextState ? 'rgba(255, 145, 0, 0.25)' : '';
+        compareBadge.style.color = nextState ? '#ff9100' : '';
+        sendTabMessage({ action: 'TOGGLE_COMPARE' });
+      });
+    });
+  }
 
   // Sync Offset Handlers
   function updateOffsetUI(val) {

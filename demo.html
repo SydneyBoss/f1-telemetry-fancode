@@ -223,17 +223,18 @@
   <main>
     <div class="instructions-card">
       <div class="instructions-text">
-        <h3>Interactive Demo Instructions</h3>
-        <p>• <strong>Drag the HUD</strong> by clicking and holding the top bar. Move it anywhere on the video screen.<br>
-           • <strong>Click the Driver Badge</strong> ("VER", "NOR", etc.) to select any driver from the session lineup.<br>
-           • <strong>Click the ⚙ Settings Gear</strong> on the HUD to adjust the stream delay offset or snap to Top-Left, Top-Right, etc.<br>
-           • <strong>Toggle Fullscreen</strong> below to test fullscreen behavior.
+        <h3>Interactive Demo: Live Circuit Map & Dual HUD Comparison</h3>
+        <p>• <strong>Circuit Track Map</strong>: Real-time car GPS dot moving along the track above the telemetry gauges.<br>
+           • <strong>Compare Mode (2 HUDs)</strong>: Click <strong>"⚔️ Compare"</strong> to open HUD 2 and plot both drivers on the map with live speed deltas!<br>
+           • <strong>Independent Dragging</strong>: Click & hold the header bar of either HUD to position each driver anywhere on screen.<br>
+           • <strong>Map Toggle</strong>: Click the <strong>🗺️</strong> icon to collapse/expand the track map.
         </p>
       </div>
       <div class="controls-pill-group">
-        <button class="pill-btn" id="btn-mock-t1">Simulate Turn 1 Braking</button>
-        <button class="pill-btn" id="btn-mock-straight">Simulate Main Straight DRS</button>
-        <button class="pill-btn" id="btn-mock-fullscreen">⛶ Test Fullscreen</button>
+        <button class="pill-btn" id="btn-toggle-dual">⚔️ Toggle Dual HUD Compare</button>
+        <button class="pill-btn" id="btn-mock-t1">Turn 1 Heavy Braking</button>
+        <button class="pill-btn" id="btn-mock-straight">Main Straight DRS Surge</button>
+        <button class="pill-btn" id="btn-mock-fullscreen">⛶ Fullscreen</button>
       </div>
     </div>
 
@@ -359,6 +360,11 @@
 
     document.getElementById('btn-toggle-cam').addEventListener('click', () => {
       onboardMode = !onboardMode;
+    });
+
+    document.getElementById('btn-toggle-dual').addEventListener('click', () => {
+      const compareBtn = document.getElementById('f1-btn-compare');
+      if (compareBtn) compareBtn.click();
     });
 
     // Quick Simulation Overrides

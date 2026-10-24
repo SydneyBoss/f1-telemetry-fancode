@@ -204,6 +204,132 @@
   color: #fff;
 }
 
+/* Compare & Map Header Controls */
+.f1-btn-compare {
+  background: rgba(255, 145, 0, 0.15);
+  border: 1px solid rgba(255, 145, 0, 0.4);
+  color: #ff9100;
+  font-weight: 800;
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.f1-btn-compare:hover {
+  background: rgba(255, 145, 0, 0.3);
+  color: #fff;
+  border-color: #ff9100;
+}
+
+.f1-btn-compare.active {
+  background: #ff9100;
+  color: #000;
+}
+
+.f1-btn-compare.close {
+  background: rgba(255, 23, 68, 0.2);
+  border-color: rgba(255, 23, 68, 0.4);
+  color: #ff5252;
+}
+
+.f1-btn-compare.close:hover {
+  background: #ff1744;
+  color: #fff;
+}
+
+.f1-delta-badge {
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.f1-delta-badge.ahead {
+  background: rgba(0, 230, 118, 0.2);
+  color: #00e676;
+  border: 1px solid rgba(0, 230, 118, 0.4);
+}
+
+.f1-delta-badge.behind {
+  background: rgba(255, 23, 68, 0.2);
+  color: #ff5252;
+  border: 1px solid rgba(255, 23, 68, 0.4);
+}
+
+/* Circuit Track Map Section */
+.f1-map-section {
+  position: relative;
+  height: 135px;
+  margin: 8px 12px 4px 12px;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.f1-map-header {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  font-size: 8px;
+  font-weight: 800;
+  color: #8b92a4;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.f1-track-svg {
+  width: 100%;
+  height: 100%;
+  padding: 8px;
+}
+
+.f1-track-line-bg {
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 6px;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.f1-track-line {
+  stroke: #4e5569;
+  stroke-width: 3px;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.f1-car-marker-group {
+  transition: transform 0.08s linear;
+}
+
+.f1-car-dot {
+  stroke: #ffffff;
+  stroke-width: 1.8px;
+}
+
+.f1-car-text {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 7.5px;
+  font-weight: 900;
+  fill: #ffffff;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
 /* Driver Selection Dropdown Overlay */
 .f1-driver-dropdown {
   display: none;
