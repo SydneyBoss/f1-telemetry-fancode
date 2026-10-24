@@ -2,8 +2,15 @@
 
 document.addEventListener('DOMContentLoaded', async () => {
   const toggleHud = document.getElementById('toggle-hud');
+  const eventStatusPill = document.getElementById('event-status-pill');
+  const eventCountry = document.getElementById('event-country');
   const sessionTitle = document.getElementById('session-title');
+  const countdownLabel = document.getElementById('countdown-label');
+  const countdownDigits = document.getElementById('countdown-digits');
   const sessionMeta = document.getElementById('session-meta');
+  const btnToggleSchedule = document.getElementById('btn-toggle-schedule');
+  const accordionArrow = document.getElementById('accordion-arrow');
+  const scheduleList = document.getElementById('schedule-list');
   const driverSelect = document.getElementById('driver-select');
   const syncSlider = document.getElementById('sync-slider');
   const offsetDisplay = document.getElementById('offset-display');
@@ -13,6 +20,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnAdd5 = document.getElementById('btn-add-5');
   const dockButtons = document.querySelectorAll('.dock-btn');
   const btnOpenDemo = document.getElementById('btn-open-demo');
+
+  let countdownInterval = null;
 
   // Load existing settings
   chrome.storage.local.get(['f1_driver', 'f1_offset', 'f1_preset', 'hudEnabled'], (res) => {
@@ -25,14 +34,52 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Fetch OpenF1 Session & Drivers
+  // Fetch OpenF1 Weekend Schedule & Active Event
   try {
-    const session = await window.OpenF1Client.getLatestSession();
-    if (session) {
-      sessionTitle.textContent = `${session.country_name || session.circuit_short_name} - ${session.session_name}`;
-      sessionMeta.textContent = `${session.year} Season • Key #${session.session_key}`;
+    const eventData = await window.OpenF1Client.getWeekendEventSchedule();
+    if (eventData && eventData.activeSession) {
+      const active = eventData.activeSession;
+      eventCountry.textContent = `${eventData.country || 'Formula 1'} GP`;
+      sessionTitle.textContent = `${active.session_name || 'F1 Session'}`;
 
-      const drivers = await window.OpenF1Client.getDrivers(session.session_key);
+      // Format Start Date & Time in User's Local Timezone
+      const startDate = new Date(active.date_start);
+      const endDate = new Date(active.date_end);
+      const timeStr = startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const dateStr = startDate.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+
+      // Target timestamp for countdown
+      let targetTime = startDate.getTime();
+
+      if (eventData.status === 'LIVE') {
+        eventStatusPill.className = 'status-pill live';
+        eventStatusPill.textContent = '🔴 LIVE NOW';
+        countdownLabel.textContent = 'SESSION ENDS IN:';
+        targetTime = endDate.getTime();
+        sessionMeta.textContent = `Started at ${timeStr} • FanCode Live Broadcast`;
+      } else if (eventData.status === 'UPCOMING') {
+        eventStatusPill.className = 'status-pill upcoming';
+        eventStatusPill.textContent = '⏳ NEXT EVENT';
+        countdownLabel.textContent = 'STARTS IN:';
+        sessionMeta.textContent = `${dateStr} at ${timeStr} (Your local time)`;
+      } else {
+        eventStatusPill.className = 'status-pill completed';
+        eventStatusPill.textContent = '🏁 COMPLETED';
+        countdownLabel.textContent = 'STATUS:';
+        countdownDigits.textContent = 'Weekend Done';
+        sessionMeta.textContent = `Finished on ${dateStr}`;
+      }
+
+      // Start live countdown timer
+      if (eventData.status === 'LIVE' || eventData.status === 'UPCOMING') {
+        startCountdown(targetTime);
+      }
+
+      // Render full weekend schedule list
+      renderWeekendSchedule(eventData.sessions, active.session_key);
+
+      // Load Drivers for active session
+      const drivers = await window.OpenF1Client.getDrivers(active.session_key);
       driverSelect.innerHTML = '';
 
       chrome.storage.local.get(['f1_driver'], (stored) => {
@@ -51,9 +98,90 @@ document.addEventListener('DOMContentLoaded', async () => {
       sessionMeta.textContent = 'Using telemetry demo simulation mode';
     }
   } catch (e) {
-    sessionTitle.textContent = 'OpenF1 Offline/Demo Mode';
-    sessionMeta.textContent = 'Check your network connection';
+    console.warn('[Popup] Error loading schedule:', e);
+    sessionTitle.textContent = 'United States GP';
+    sessionMeta.textContent = 'OpenF1 Demo Lap Mode';
   }
+
+  // Live countdown calculation
+  function startCountdown(targetTimestamp) {
+    if (countdownInterval) clearInterval(countdownInterval);
+
+    const update = () => {
+      const now = Date.now();
+      const diff = targetTimestamp - now;
+
+      if (diff <= 0) {
+        countdownDigits.textContent = '00h 00m 00s';
+        clearInterval(countdownInterval);
+        return;
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const secs = Math.floor((diff % (1000 * 60)) / 1000);
+
+      const pad = (n) => String(n).padStart(2, '0');
+
+      if (days > 0) {
+        countdownDigits.textContent = `${days}d ${pad(hours)}h ${pad(mins)}m`;
+      } else {
+        countdownDigits.textContent = `${pad(hours)}h ${pad(mins)}m ${pad(secs)}s`;
+      }
+    };
+
+    update();
+    countdownInterval = setInterval(update, 1000);
+  }
+
+  // Render Weekend Schedule List
+  function renderWeekendSchedule(sessions, activeSessionKey) {
+    if (!sessions || sessions.length === 0) return;
+    scheduleList.innerHTML = '';
+
+    const now = new Date();
+
+    sessions.forEach(s => {
+      const start = new Date(s.date_start);
+      const end = new Date(s.date_end);
+      const isLive = now >= start && now <= end;
+      const isPast = now > end;
+
+      let statusClass = 'upcoming';
+      let icon = '⏳';
+      if (isLive) {
+        statusClass = 'live';
+        icon = '🔴';
+      } else if (isPast) {
+        statusClass = 'completed';
+        icon = '✓';
+      }
+
+      const row = document.createElement('div');
+      row.className = `schedule-row ${statusClass} ${s.session_key === activeSessionKey ? 'active' : ''}`;
+
+      const timeText = start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const dayText = start.toLocaleDateString([], { weekday: 'short' });
+
+      row.innerHTML = `
+        <div class="schedule-row-left">
+          <span class="schedule-dot"></span>
+          <span>${s.session_name}</span>
+        </div>
+        <div class="schedule-time">${dayText} ${timeText}</div>
+      `;
+
+      scheduleList.appendChild(row);
+    });
+  }
+
+  // Accordion Toggle
+  btnToggleSchedule.addEventListener('click', () => {
+    const isHidden = scheduleList.style.display === 'none';
+    scheduleList.style.display = isHidden ? 'flex' : 'none';
+    accordionArrow.classList.toggle('open', isHidden);
+  });
 
   // Toggle HUD
   toggleHud.addEventListener('change', () => {

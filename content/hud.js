@@ -439,7 +439,9 @@
     const sessionTag = hudRoot.querySelector('#f1-session-tag');
     try {
       sessionTag.textContent = 'Connecting to OpenF1...';
-      const session = await window.OpenF1Client.getLatestSession();
+      const schedule = await window.OpenF1Client.getWeekendEventSchedule();
+      const session = schedule?.activeSession || await window.OpenF1Client.getLatestSession();
+
       if (!session) {
         sessionTag.textContent = 'No active session found';
         startSimulation();
@@ -447,7 +449,18 @@
       }
 
       state.session = session;
-      sessionTag.textContent = `${session.circuit_short_name || 'F1'} - ${session.session_name || 'Session'}`;
+
+      if (schedule && schedule.status === 'UPCOMING') {
+        const diffMs = new Date(session.date_start).getTime() - Date.now();
+        const diffH = Math.floor(diffMs / 3600000);
+        const diffM = Math.floor((diffMs % 3600000) / 60000);
+        const timeStr = diffH > 0 ? `${diffH}h ${diffM}m` : `${diffM}m`;
+        sessionTag.textContent = `⏳ NEXT: ${session.session_name} (in ${timeStr})`;
+      } else if (schedule && schedule.status === 'LIVE') {
+        sessionTag.textContent = `🔴 LIVE: ${session.session_name}`;
+      } else {
+        sessionTag.textContent = `${session.circuit_short_name || 'F1'} - ${session.session_name || 'Session'}`;
+      }
 
       // Load Drivers
       const drivers = await window.OpenF1Client.getDrivers(session.session_key);

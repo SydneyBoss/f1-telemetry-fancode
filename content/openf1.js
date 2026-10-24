@@ -123,6 +123,70 @@ window.OpenF1Client = (function () {
         driver_number: driverNumber,
         'date>=': past.toISOString()
       });
+    },
+
+    /**
+     * Get all sessions for a specific Grand Prix weekend meeting
+     */
+    async getMeetingSessions(meetingKey) {
+      return await apiRequest('sessions', { meeting_key: meetingKey });
+    },
+
+    /**
+     * Get current status, next upcoming event, and weekend schedule
+     */
+    async getWeekendEventSchedule() {
+      const latest = await this.getLatestSession();
+      if (!latest) return null;
+
+      let allSessions = [];
+      try {
+        allSessions = await this.getMeetingSessions(latest.meeting_key);
+        allSessions.sort((a, b) => new Date(a.date_start) - new Date(b.date_start));
+      } catch (e) {
+        allSessions = [latest];
+      }
+
+      const now = new Date();
+
+      // Check if a session is LIVE right now
+      const liveSession = allSessions.find(s => {
+        const start = new Date(s.date_start);
+        const end = new Date(s.date_end);
+        return now >= start && now <= end;
+      });
+
+      if (liveSession) {
+        return {
+          status: 'LIVE',
+          activeSession: liveSession,
+          sessions: allSessions,
+          circuit: liveSession.circuit_short_name || liveSession.country_name,
+          country: liveSession.country_name
+        };
+      }
+
+      // Find the next upcoming session
+      const upcomingSession = allSessions.find(s => new Date(s.date_start) > now);
+
+      if (upcomingSession) {
+        return {
+          status: 'UPCOMING',
+          activeSession: upcomingSession,
+          sessions: allSessions,
+          circuit: upcomingSession.circuit_short_name || upcomingSession.country_name,
+          country: upcomingSession.country_name
+        };
+      }
+
+      // If all completed, return latest completed
+      return {
+        status: 'COMPLETED',
+        activeSession: latest,
+        sessions: allSessions,
+        circuit: latest.circuit_short_name || latest.country_name,
+        country: latest.country_name
+      };
     }
   };
 })();

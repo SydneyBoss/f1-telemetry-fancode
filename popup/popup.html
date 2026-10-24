@@ -22,11 +22,29 @@
       </label>
     </header>
 
-    <!-- Session Status -->
-    <div class="session-card">
-      <div class="session-label">Current Session</div>
+    <!-- Session & Upcoming Event Card -->
+    <div class="session-card" id="event-card">
+      <div class="session-header-row">
+        <span class="status-pill upcoming" id="event-status-pill">UPCOMING</span>
+        <span class="session-country" id="event-country">United States</span>
+      </div>
       <div class="session-title" id="session-title">Connecting to OpenF1...</div>
-      <div class="session-meta" id="session-meta">Fetching latest weekend data</div>
+
+      <!-- Countdown Box -->
+      <div class="countdown-box" id="countdown-box">
+        <div class="countdown-label" id="countdown-label">STARTS IN:</div>
+        <div class="countdown-digits" id="countdown-digits">--h --m --s</div>
+      </div>
+
+      <div class="session-meta" id="session-meta">Fetching schedule...</div>
+
+      <!-- Expandable Weekend Schedule Accordion -->
+      <button class="schedule-toggle-btn" id="btn-toggle-schedule" type="button">
+        <span>📅 Weekend Schedule (5 Events)</span>
+        <span class="accordion-arrow" id="accordion-arrow">▼</span>
+      </button>
+
+      <div class="schedule-list" id="schedule-list" style="display: none;"></div>
     </div>
 
     <!-- Active Driver -->
