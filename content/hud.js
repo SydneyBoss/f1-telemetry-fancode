@@ -22,6 +22,8 @@
     sessionKey: 'latest',
     drivers: [],
     showMap: true,
+    showTrace: false,
+    preset: 'pos-top-left',
     syncOffset: 0,
     opacity: 0.95,
     simulatedMode: false,
@@ -59,6 +61,20 @@
   let hudSecondary = null;
   let pollTimer = null;
   let renderLoopId = null;
+  let pollNow = null;
+  let pollDebounce = null;
+  let manualUntil = 0;
+  let holdTimer = null;
+  let frameCount = 0;
+
+  // Cached element refs and last-written values: no per-frame DOM lookups, write only on change
+  const els = { 1: {}, 2: {} };
+  const lastVals = { 1: {}, 2: {} };
+  const ledStates = { 1: new Array(15).fill(''), 2: new Array(15).fill('') };
+  const traceHistory = [];
+  const TRACE_POINTS = 150;
+
+  const hasStorage = () => typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local;
 
   // Initialize
   init();
@@ -66,27 +82,145 @@
   async function init() {
     loadSavedSettings();
     createHUDDOM();
+    cacheElements();
     setupEventListeners();
     setupFullscreenHandler();
+    setupVideoObserver();
+    setupStorageSync();
     startRenderLoop();
     await loadF1Session();
   }
 
+  function cacheElements() {
+    [1, 2].forEach(slot => {
+      const q = (s) => hudRoot.querySelector(s);
+      Object.assign(els[slot], {
+        gear: q(`#f1-gear-val-${slot}`),
+        speed: q(`#f1-speed-val-${slot}`),
+        thrFill: q(`#f1-throttle-fill-${slot}`),
+        thrVal: q(`#f1-throttle-val-${slot}`),
+        brkFill: q(`#f1-brake-fill-${slot}`),
+        brkVal: q(`#f1-brake-val-${slot}`),
+        rpmText: q(`#f1-rpm-text-${slot}`),
+        drs: q(`#f1-drs-badge-${slot}`),
+        ledBar: q(`#f1-led-bar-${slot}`),
+        leds: Array.from(hudRoot.querySelectorAll(`#f1-led-bar-${slot} .f1-led`))
+      });
+    });
+    els[1].trace = hudRoot.querySelector('#f1-trace');
+  }
+
+  function setVisible(visible, persist) {
+    state.visible = visible;
+    if (hudRoot) hudRoot.style.display = visible ? 'block' : 'none';
+    if (persist && hasStorage()) chrome.storage.local.set({ hudEnabled: visible });
+  }
+
+  function applyTraceVisibility(persist) {
+    const wrap = hudRoot.querySelector('#f1-trace-wrap');
+    const btn = hudRoot.querySelector('#f1-toggle-trace');
+    if (wrap) wrap.style.display = state.showTrace ? 'block' : 'none';
+    if (btn) btn.textContent = state.showTrace ? 'Hide' : 'Show';
+    if (persist && hasStorage()) chrome.storage.local.set({ f1_show_trace: state.showTrace });
+  }
+
+  function updateOffsetUI() {
+    if (!hudRoot) return;
+    const slider = hudRoot.querySelector('#f1-offset-slider');
+    const val = hudRoot.querySelector('#f1-offset-val');
+    if (slider) slider.value = state.syncOffset;
+    if (val) val.textContent = `${state.syncOffset > 0 ? '+' : ''}${state.syncOffset}s`;
+  }
+
+  function applyOffset(newOffset, persist) {
+    const v = parseInt(newOffset, 10);
+    if (Number.isNaN(v)) return;
+    state.syncOffset = v;
+    updateOffsetUI();
+    if (persist && hasStorage()) chrome.storage.local.set({ f1_offset: v });
+    // Re-fetch around the new playback point shortly after the user stops adjusting
+    if (pollNow) {
+      clearTimeout(pollDebounce);
+      pollDebounce = setTimeout(pollNow, 400);
+    }
+  }
+
+  function applyPreset(preset, persist) {
+    if (!hudPrimary) return;
+    state.preset = preset;
+    setPresetPosition(hudPrimary, preset);
+    if (persist && hasStorage()) chrome.storage.local.set({ f1_preset: preset, f1_pos: null });
+  }
+
+  function applyFreePosition(pos) {
+    hudPrimary.className = hudPrimary.classList.contains('minimized') ? 'f1-hud-container minimized' : 'f1-hud-container';
+    hudPrimary.style.left = pos.left;
+    hudPrimary.style.top = pos.top;
+    hudPrimary.style.right = 'auto';
+    hudPrimary.style.bottom = 'auto';
+    hudPrimary.style.transform = 'none';
+  }
+
   function loadSavedSettings() {
-    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      chrome.storage.local.get(['f1_driver', 'f1_offset', 'f1_preset', 'f1_opacity', 'f1_pos', 'f1_show_map'], (res) => {
-        if (res.f1_offset !== undefined) state.syncOffset = res.f1_offset;
+    if (hasStorage()) {
+      chrome.storage.local.get(['f1_driver', 'f1_offset', 'f1_preset', 'f1_opacity', 'f1_pos', 'f1_show_map', 'f1_show_trace', 'hudEnabled'], (res) => {
+        if (res.hudEnabled === false) setVisible(false, false);
+        if (res.f1_show_trace !== undefined) { state.showTrace = res.f1_show_trace; applyTraceVisibility(false); }
+        if (res.f1_offset !== undefined) { state.syncOffset = res.f1_offset; updateOffsetUI(); }
         if (res.f1_opacity) state.opacity = res.f1_opacity;
         if (res.f1_driver) state.savedDriverNumber = res.f1_driver;
         if (res.f1_show_map !== undefined) state.showMap = res.f1_show_map;
 
         if (hudPrimary) {
           hudPrimary.style.opacity = state.opacity;
+          const opacityInput = hudRoot.querySelector('#f1-opacity-slider');
+          if (opacityInput) opacityInput.value = state.opacity * 100;
           const mapSec = hudPrimary.querySelector('#f1-map-section');
           if (mapSec) mapSec.style.display = state.showMap ? 'flex' : 'none';
+
+          if (res.f1_pos && res.f1_pos.left && res.f1_pos.top) applyFreePosition(res.f1_pos);
+          else if (res.f1_preset) applyPreset(res.f1_preset, false);
         }
       });
     }
+  }
+
+  // Keep the HUD in sync with popup changes without reloading the page
+  function setupStorageSync() {
+    if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.onChanged) return;
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area !== 'local') return;
+      if (changes.hudEnabled && changes.hudEnabled.newValue !== undefined) {
+        const v = !!changes.hudEnabled.newValue;
+        if (v !== state.visible) setVisible(v, false);
+      }
+      if (changes.f1_offset && changes.f1_offset.newValue !== state.syncOffset) {
+        applyOffset(changes.f1_offset.newValue, false);
+      }
+      if (changes.f1_preset && changes.f1_preset.newValue && changes.f1_preset.newValue !== state.preset) {
+        applyPreset(changes.f1_preset.newValue, false);
+      }
+      if (changes.f1_pos && !changes.f1_pos.newValue && hudPrimary.style.left) {
+        applyPreset(state.preset, false);
+      }
+    });
+  }
+
+  // The player is often rendered late or re-rendered (SPA); re-attach when it appears
+  function setupVideoObserver() {
+    let timer = null;
+    const observer = new MutationObserver(() => {
+      if (timer) return;
+      timer = setTimeout(() => {
+        timer = null;
+        if (document.fullscreenElement || document.webkitFullscreenElement) return;
+        const video = document.querySelector('video');
+        if (hudRoot && video && video.parentElement && hudRoot.parentElement !== video.parentElement) {
+          mountHUD(hudRoot);
+        }
+      }, 500);
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
   }
 
   function createHUDDOM() {
@@ -166,6 +300,16 @@
           </div>
         </div>
 
+        <!-- Scrolling input trace (last ~5s) -->
+        <div class="f1-trace-wrap" id="f1-trace-wrap" style="display: none;">
+          <canvas id="f1-trace" width="600" height="128"></canvas>
+          <div class="f1-trace-legend">
+            <span><i style="background:#00e676"></i>THR</span>
+            <span><i style="background:#ff1744"></i>BRK</span>
+            <span><i style="background:#00f0ff"></i>SPD</span>
+          </div>
+        </div>
+
         <div class="f1-telemetry-body">
           <div class="f1-center-metrics">
             <div class="f1-gear-box">
@@ -227,6 +371,10 @@
               <button class="f1-dock-btn" data-preset="pos-bottom-left">BL</button>
               <button class="f1-dock-btn" data-preset="pos-bottom-right">BR</button>
             </div>
+          </div>
+          <div class="f1-control-row">
+            <label>Input Trace Graph:</label>
+            <button class="f1-dock-btn" id="f1-toggle-trace">Show</button>
           </div>
         </div>
       </div>
@@ -317,7 +465,7 @@
   function mountHUD(element) {
     const video = document.querySelector('video');
     const container = video?.parentElement || document.getElementById('player-container') || document.body;
-    container.appendChild(element);
+    if (element.parentElement !== container) container.appendChild(element);
   }
 
   function setupFullscreenHandler() {
@@ -404,31 +552,26 @@
       btnMinimize1.textContent = state.minimized ? '▢' : '_';
     });
 
-    btnClose1.addEventListener('click', () => {
-      hudRoot.style.display = 'none';
-      state.visible = false;
-    });
+    btnClose1.addEventListener('click', () => setVisible(false, true));
 
     // Sync Offset Handlers
     const offsetSlider = hudRoot.querySelector('#f1-offset-slider');
-    const offsetVal = hudRoot.querySelector('#f1-offset-val');
     const offsetPlus = hudRoot.querySelector('#f1-offset-plus');
     const offsetMinus = hudRoot.querySelector('#f1-offset-minus');
     const opacitySlider = hudRoot.querySelector('#f1-opacity-slider');
 
-    const updateOffset = (newOffset) => {
-      state.syncOffset = parseInt(newOffset, 10);
-      offsetSlider.value = state.syncOffset;
-      offsetVal.textContent = `${state.syncOffset > 0 ? '+' : ''}${state.syncOffset}s`;
-      if (typeof chrome !== 'undefined' && chrome.storage) {
-        chrome.storage.local.set({ f1_offset: state.syncOffset });
-      }
-    };
+    offsetSlider.addEventListener('input', (e) => applyOffset(e.target.value, true));
+    offsetPlus.addEventListener('click', () => applyOffset(state.syncOffset + 1, true));
+    offsetMinus.addEventListener('click', () => applyOffset(state.syncOffset - 1, true));
 
-    offsetSlider.addEventListener('input', (e) => updateOffset(e.target.value));
-    offsetPlus.addEventListener('click', () => updateOffset(state.syncOffset + 1));
-    offsetMinus.addEventListener('click', () => updateOffset(state.syncOffset - 1));
+    hudRoot.querySelectorAll('.f1-dock-btn[data-preset]').forEach(btn => {
+      btn.addEventListener('click', () => applyPreset(btn.dataset.preset, true));
+    });
 
+    hudRoot.querySelector('#f1-toggle-trace').addEventListener('click', () => {
+      state.showTrace = !state.showTrace;
+      applyTraceVisibility(true);
+    });
     opacitySlider.addEventListener('input', (e) => {
       state.opacity = e.target.value / 100;
       hudPrimary.style.opacity = state.opacity;
@@ -442,8 +585,7 @@
     if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
       chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         if (msg.action === 'TOGGLE_HUD') {
-          state.visible = !state.visible;
-          hudRoot.style.display = state.visible ? 'block' : 'none';
+          setVisible(!state.visible, true);
           sendResponse({ visible: state.visible });
         }
         if (msg.action === 'SELECT_DRIVER') {
@@ -480,7 +622,7 @@
 
     document.addEventListener('mousemove', (e) => {
       if (!isDragging) return;
-      containerEl.className = 'f1-hud-container';
+      containerEl.className = containerEl.classList.contains('minimized') ? 'f1-hud-container minimized' : 'f1-hud-container';
 
       let x = e.clientX - dragOffset.x;
       let y = e.clientY - dragOffset.y;
@@ -499,12 +641,16 @@
     });
 
     document.addEventListener('mouseup', () => {
+      if (!isDragging) return;
       isDragging = false;
+      if (containerEl === hudPrimary && hasStorage()) {
+        chrome.storage.local.set({ f1_pos: { left: containerEl.style.left, top: containerEl.style.top } });
+      }
     });
   }
 
   function setPresetPosition(containerEl, presetClass) {
-    containerEl.className = `f1-hud-container ${presetClass}`;
+    containerEl.className = `f1-hud-container ${presetClass}${containerEl.classList.contains('minimized') ? ' minimized' : ''}`;
     containerEl.style.left = '';
     containerEl.style.top = '';
     containerEl.style.right = '';
@@ -611,12 +757,22 @@
       drivers.forEach(driver => {
         const item = document.createElement('div');
         item.className = 'f1-driver-item';
-        item.innerHTML = `
-          <div class="f1-driver-item-color" style="background-color: ${driver.color}"></div>
-          <div class="f1-driver-num" style="color: ${driver.color}; font-weight:bold; min-width: 20px;">${driver.number}</div>
-          <div class="f1-driver-item-name">${driver.name || driver.code}</div>
-          <div class="f1-driver-item-team">${driver.team || ''}</div>
-        `;
+
+        const add = (cls, text) => {
+          const el = document.createElement('div');
+          el.className = cls;
+          el.textContent = text;
+          item.appendChild(el);
+          return el;
+        };
+
+        add('f1-driver-item-color', '').style.backgroundColor = driver.color;
+        const num = add('f1-driver-num', driver.number);
+        num.style.color = driver.color;
+        num.style.fontWeight = 'bold';
+        num.style.minWidth = '20px';
+        add('f1-driver-item-name', driver.name || driver.code);
+        add('f1-driver-item-team', driver.team || '');
 
         item.addEventListener('click', () => {
           selectDriver(driver, slot);
@@ -669,6 +825,45 @@
     }
   }
 
+  // Merge new samples into a buffer: de-duplicate by timestamp, keep only what playback can need
+  const isHolding = () => Date.now() < manualUntil;
+
+  // Pin a telemetry snapshot on the primary HUD for a few seconds, then resume (used by demo.html)
+  function holdTelemetry(t, ms = 4000) {
+    const resumeSim = state.simulatedMode || isBufferStale(state.telemetryBuffer);
+    manualUntil = Date.now() + ms;
+    state.simulatedMode = false;
+    state.currentTelemetry = { ...state.currentTelemetry, ...t };
+    clearTimeout(holdTimer);
+    holdTimer = setTimeout(() => {
+      manualUntil = 0;
+      if (resumeSim) startSimulation();
+    }, ms);
+  }
+
+  window.F1HUD = {
+    holdTelemetry,
+    toggleTrace: () => hudRoot.querySelector('#f1-toggle-trace').click(),
+    toggleCompare: () => toggleCompareMode()
+  };
+
+  function mergeSamples(buffer, incoming) {
+    const seen = new Set(buffer.map(s => s.date));
+    const merged = buffer.slice();
+    for (const s of incoming) {
+      if (!seen.has(s.date)) merged.push(s);
+    }
+    merged.sort((a, b) => new Date(a.date) - new Date(b.date));
+    const cutoff = Date.now() - (Math.max(0, state.syncOffset) + 30) * 1000;
+    return merged.filter(s => new Date(s.date).getTime() >= cutoff);
+  }
+
+  function isBufferStale(buffer) {
+    if (!buffer || buffer.length === 0) return true;
+    const newest = new Date(buffer[buffer.length - 1].date).getTime();
+    return newest < Date.now() - (Math.max(0, state.syncOffset) + 20) * 1000;
+  }
+
   // Telemetry Polling Loop
   function startTelemetryPolling() {
     if (pollTimer) clearInterval(pollTimer);
@@ -677,38 +872,40 @@
       if (!state.selectedDriver || !state.session) return;
 
       try {
+        const key = state.session.session_key;
         const promises = [
-          window.OpenF1Client.getRecentCarData(state.session.session_key, state.selectedDriver.number, 15)
+          window.OpenF1Client.getCarWindow(key, state.selectedDriver.number, state.syncOffset)
         ];
 
         if (state.compareMode && state.compareDriver) {
-          promises.push(window.OpenF1Client.getRecentCarData(state.session.session_key, state.compareDriver.number, 15));
+          promises.push(window.OpenF1Client.getCarWindow(key, state.compareDriver.number, state.syncOffset));
         }
 
         const [d1Data, d2Data] = await Promise.all(promises);
 
         if (Array.isArray(d1Data) && d1Data.length > 0) {
           state.simulatedMode = false;
-          state.telemetryBuffer = d1Data.sort((a, b) => new Date(a.date) - new Date(b.date));
-          if (d2Data && d2Data.length > 0) {
-            state.compareTelemetryBuffer = d2Data.sort((a, b) => new Date(a.date) - new Date(b.date));
+          state.telemetryBuffer = mergeSamples(state.telemetryBuffer, d1Data);
+          if (Array.isArray(d2Data) && d2Data.length > 0) {
+            state.compareTelemetryBuffer = mergeSamples(state.compareTelemetryBuffer, d2Data);
           }
-        } else if (!state.simulatedMode) {
+        } else if (!state.simulatedMode && !isHolding() && isBufferStale(state.telemetryBuffer)) {
           startSimulation();
         }
       } catch (e) {
-        if (!state.simulatedMode) startSimulation();
+        if (!state.simulatedMode && !isHolding() && isBufferStale(state.telemetryBuffer)) startSimulation();
       }
     };
 
+    pollNow = poll;
     poll();
-    pollTimer = setInterval(poll, 3000);
+    pollTimer = setInterval(poll, 2000);
   }
 
   // Render Loop (60 FPS)
   function startRenderLoop() {
     const updateUI = () => {
-      if (!state.simulatedMode && state.telemetryBuffer.length > 0) {
+      if (!state.simulatedMode && !isHolding() && state.telemetryBuffer.length > 0) {
         interpolateTelemetry();
       }
 
@@ -716,6 +913,14 @@
       if (state.compareMode) {
         renderTelemetryUI(state.compareTelemetry, 2);
         renderDeltaUI();
+      }
+
+      // Sample the trace at ~30 Hz and redraw only while the HUD is on screen
+      if (frameCount++ % 2 === 0 && state.visible && state.showTrace) {
+        const t = state.currentTelemetry;
+        traceHistory.push({ speed: t.speed, throttle: t.throttle, brake: t.brake });
+        if (traceHistory.length > TRACE_POINTS) traceHistory.shift();
+        if (!state.minimized) drawTrace();
       }
 
       updateTrackMapMarkers();
@@ -732,7 +937,10 @@
 
     const sample = (buffer) => {
       if (!buffer || buffer.length === 0) return null;
-      let closest = buffer[buffer.length - 1];
+      const trackProgress = (now % 35000) / 35000;
+      // Hold the first/last sample when the playback point is outside the buffered range
+      if (targetTime <= new Date(buffer[0].date).getTime()) return { ...buffer[0], trackProgress };
+      let closest = { ...buffer[buffer.length - 1], trackProgress };
       for (let i = 0; i < buffer.length - 1; i++) {
         const tA = new Date(buffer[i].date).getTime();
         const tB = new Date(buffer[i + 1].date).getTime();
@@ -745,7 +953,7 @@
             throttle: Math.round(buffer[i].throttle + (buffer[i + 1].throttle - buffer[i].throttle) * factor),
             brake: buffer[i + 1].brake > 0 ? buffer[i + 1].brake : buffer[i].brake,
             drs: buffer[i + 1].drs,
-            trackProgress: (now % 35000) / 35000
+            trackProgress
           };
         }
       }
@@ -781,29 +989,71 @@
     }
   }
 
+  function setText(slot, key, el, value) {
+    const cache = lastVals[slot];
+    if (el && cache[key] !== value) {
+      el.textContent = value;
+      cache[key] = value;
+    }
+  }
+
+  function setHeight(slot, key, el, value) {
+    const cache = lastVals[slot];
+    if (el && cache[key] !== value) {
+      el.style.height = value;
+      cache[key] = value;
+    }
+  }
+
+  function drawTrace() {
+    const canvas = els[1].trace;
+    if (!canvas || traceHistory.length < 2) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+    ctx.lineWidth = 1;
+    for (let i = 1; i < 4; i++) {
+      ctx.beginPath();
+      ctx.moveTo(0, (H * i) / 4);
+      ctx.lineTo(W, (H * i) / 4);
+      ctx.stroke();
+    }
+
+    const line = (key, max, color) => {
+      ctx.beginPath();
+      traceHistory.forEach((p, i) => {
+        const x = (i / (TRACE_POINTS - 1)) * W;
+        const y = H - (Math.min(p[key], max) / max) * (H - 4) - 2;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    };
+
+    line('speed', 350, '#00f0ff');
+    line('throttle', 100, '#00e676');
+    line('brake', 100, '#ff1744');
+  }
+
   function renderTelemetryUI(t, slot = 1) {
     if (!hudRoot) return;
+    const e = els[slot];
 
-    const gearEl = hudRoot.querySelector(`#f1-gear-val-${slot}`);
-    const speedEl = hudRoot.querySelector(`#f1-speed-val-${slot}`);
-    if (gearEl) gearEl.textContent = t.gear;
-    if (speedEl) speedEl.textContent = t.speed;
+    setText(slot, 'gear', e.gear, t.gear);
+    setText(slot, 'speed', e.speed, t.speed);
 
-    const thrFill = hudRoot.querySelector(`#f1-throttle-fill-${slot}`);
-    const thrVal = hudRoot.querySelector(`#f1-throttle-val-${slot}`);
-    const brkFill = hudRoot.querySelector(`#f1-brake-fill-${slot}`);
-    const brkVal = hudRoot.querySelector(`#f1-brake-val-${slot}`);
+    setHeight(slot, 'thrFill', e.thrFill, `${t.throttle}%`);
+    setText(slot, 'thrVal', e.thrVal, `${t.throttle}%`);
+    setHeight(slot, 'brkFill', e.brkFill, `${t.brake}%`);
+    setText(slot, 'brkVal', e.brkVal, `${t.brake}%`);
 
-    if (thrFill) thrFill.style.height = `${t.throttle}%`;
-    if (thrVal) thrVal.textContent = `${t.throttle}%`;
-    if (brkFill) brkFill.style.height = `${t.brake}%`;
-    if (brkVal) brkVal.textContent = `${t.brake}%`;
+    setText(slot, 'rpm', e.rpmText, `${t.rpm.toLocaleString()} RPM`);
 
-    const rpmText = hudRoot.querySelector(`#f1-rpm-text-${slot}`);
-    if (rpmText) rpmText.textContent = `${t.rpm.toLocaleString()} RPM`;
-
-    // Shift LEDs
-    const leds = hudRoot.querySelectorAll(`#f1-led-bar-${slot} .f1-led`);
+    // Shift LEDs: 0-4 green, 5-9 red, 10-14 blue
     const rpm = t.rpm;
     const minRpm = 8500;
     const maxRpm = 13200;
@@ -814,27 +1064,27 @@
       activeLeds = Math.round(ratio * 15);
     }
 
-    leds.forEach((led, idx) => {
-      led.className = 'f1-led';
-      if (idx < activeLeds) {
-        if (idx < 5) led.classList.add('lit-green');
-        else if (idx < 10) led.classList.add('lit-red');
-        else led.classList.add('lit-blue');
+    const ledState = ledStates[slot];
+    e.leds.forEach((led, idx) => {
+      const cls = idx < activeLeds ? (idx < 5 ? 'lit-green' : idx < 10 ? 'lit-red' : 'lit-blue') : '';
+      if (ledState[idx] !== cls) {
+        led.className = cls ? `f1-led ${cls}` : 'f1-led';
+        ledState[idx] = cls;
       }
     });
 
-    const drsBadge = hudRoot.querySelector(`#f1-drs-badge-${slot}`);
-    if (drsBadge) {
-      if (t.drs === 10 || t.drs === 12 || t.drs === 14) {
-        drsBadge.className = 'f1-drs-badge active';
-        drsBadge.textContent = 'DRS ACTIVE';
-      } else if (t.drs === 8) {
-        drsBadge.className = 'f1-drs-badge avail';
-        drsBadge.textContent = 'DRS AVAIL';
-      } else {
-        drsBadge.className = 'f1-drs-badge';
-        drsBadge.textContent = 'DRS OFF';
-      }
+    // Flash all LEDs at the redline as a shift cue
+    const flash = rpm > 13000;
+    if (e.ledBar && lastVals[slot].flash !== flash) {
+      e.ledBar.classList.toggle('flash', flash);
+      lastVals[slot].flash = flash;
+    }
+
+    const drsState = (t.drs === 10 || t.drs === 12 || t.drs === 14) ? 'active' : (t.drs === 8 ? 'avail' : 'off');
+    if (e.drs && lastVals[slot].drs !== drsState) {
+      e.drs.className = drsState === 'off' ? 'f1-drs-badge' : `f1-drs-badge ${drsState}`;
+      e.drs.textContent = drsState === 'active' ? 'DRS ACTIVE' : drsState === 'avail' ? 'DRS AVAIL' : 'DRS OFF';
+      lastVals[slot].drs = drsState;
     }
   }
 

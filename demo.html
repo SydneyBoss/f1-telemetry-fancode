@@ -227,11 +227,14 @@
         <p>• <strong>Circuit Track Map</strong>: Real-time car GPS dot moving along the track above the telemetry gauges.<br>
            • <strong>Compare Mode (2 HUDs)</strong>: Click <strong>"⚔️ Compare"</strong> to open HUD 2 and plot both drivers on the map with live speed deltas!<br>
            • <strong>Independent Dragging</strong>: Click & hold the header bar of either HUD to position each driver anywhere on screen.<br>
-           • <strong>Map Toggle</strong>: Click the <strong>🗺️</strong> icon to collapse/expand the track map.
+           • <strong>Map Toggle</strong>: Click the <strong>🗺️</strong> icon to collapse/expand the track map.<br>
+           • <strong>Settings (⚙)</strong>: Adjust the stream sync offset, opacity, dock position, and show/hide the input trace graph (hidden by default).<br>
+           • <strong>Shift lights</strong> flash blue near redline; use <strong>"Main Straight DRS Surge"</strong> to see it.
         </p>
       </div>
       <div class="controls-pill-group">
         <button class="pill-btn" id="btn-toggle-dual">⚔️ Toggle Dual HUD Compare</button>
+        <button class="pill-btn" id="btn-toggle-trace">📈 Toggle Input Trace Graph</button>
         <button class="pill-btn" id="btn-mock-t1">Turn 1 Heavy Braking</button>
         <button class="pill-btn" id="btn-mock-straight">Main Straight DRS Surge</button>
         <button class="pill-btn" id="btn-mock-fullscreen">⛶ Fullscreen</button>
@@ -363,64 +366,24 @@
     });
 
     document.getElementById('btn-toggle-dual').addEventListener('click', () => {
-      const compareBtn = document.getElementById('f1-btn-compare');
-      if (compareBtn) compareBtn.click();
+      if (window.F1HUD) window.F1HUD.toggleCompare();
     });
 
-    // Quick Simulation Overrides
+    // Quick Simulation Overrides: pin a telemetry snapshot on the HUD for 4s, then resume the lap
     document.getElementById('btn-mock-t1').addEventListener('click', () => {
-      if (window.__F1_HUD_INITIALIZED__) {
-        // Trigger braking state
-        const thrFill = document.querySelector('#f1-throttle-fill');
-        const thrVal = document.querySelector('#f1-throttle-val');
-        const brkFill = document.querySelector('#f1-brake-fill');
-        const brkVal = document.querySelector('#f1-brake-val');
-        const gearEl = document.querySelector('#f1-gear-val');
-        const speedEl = document.querySelector('#f1-speed-val');
-        const drsEl = document.querySelector('#f1-drs-badge');
-        const rpmText = document.querySelector('#f1-rpm-text');
-
-        if (thrFill) thrFill.style.height = '0%';
-        if (thrVal) thrVal.textContent = '0%';
-        if (brkFill) brkFill.style.height = '100%';
-        if (brkVal) brkVal.textContent = '100%';
-        if (gearEl) gearEl.textContent = '2';
-        if (speedEl) speedEl.textContent = '84';
-        if (drsEl) { drsEl.className = 'f1-drs-badge'; drsEl.textContent = 'DRS OFF'; }
-        if (rpmText) rpmText.textContent = '10,400 RPM';
-
-        const leds = document.querySelectorAll('.f1-led');
-        leds.forEach((l, i) => {
-          l.className = 'f1-led' + (i < 6 ? ' lit-green' : '');
-        });
+      if (window.F1HUD) {
+        window.F1HUD.holdTelemetry({ speed: 84, gear: 2, rpm: 10400, throttle: 0, brake: 100, drs: 0 });
       }
     });
 
     document.getElementById('btn-mock-straight').addEventListener('click', () => {
-      if (window.__F1_HUD_INITIALIZED__) {
-        const thrFill = document.querySelector('#f1-throttle-fill');
-        const thrVal = document.querySelector('#f1-throttle-val');
-        const brkFill = document.querySelector('#f1-brake-fill');
-        const brkVal = document.querySelector('#f1-brake-val');
-        const gearEl = document.querySelector('#f1-gear-val');
-        const speedEl = document.querySelector('#f1-speed-val');
-        const drsEl = document.querySelector('#f1-drs-badge');
-        const rpmText = document.querySelector('#f1-rpm-text');
-
-        if (thrFill) thrFill.style.height = '100%';
-        if (thrVal) thrVal.textContent = '100%';
-        if (brkFill) brkFill.style.height = '0%';
-        if (brkVal) brkVal.textContent = '0%';
-        if (gearEl) gearEl.textContent = '8';
-        if (speedEl) speedEl.textContent = '338';
-        if (drsEl) { drsEl.className = 'f1-drs-badge active'; drsEl.textContent = 'DRS ACTIVE'; }
-        if (rpmText) rpmText.textContent = '13,250 RPM';
-
-        const leds = document.querySelectorAll('.f1-led');
-        leds.forEach((l, i) => {
-          l.className = 'f1-led' + (i < 5 ? ' lit-green' : (i < 10 ? ' lit-red' : ' lit-blue'));
-        });
+      if (window.F1HUD) {
+        window.F1HUD.holdTelemetry({ speed: 338, gear: 8, rpm: 13250, throttle: 100, brake: 0, drs: 12 });
       }
+    });
+
+    document.getElementById('btn-toggle-trace').addEventListener('click', () => {
+      if (window.F1HUD) window.F1HUD.toggleTrace();
     });
   </script>
 </body>

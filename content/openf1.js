@@ -112,6 +112,20 @@ window.OpenF1Client = (function () {
     },
 
     /**
+     * Get car data around the playback point (now - offset), so large
+     * stream-delay offsets still have samples to interpolate.
+     */
+    async getCarWindow(sessionKey, driverNumber, offsetSec = 0, beforeSec = 10, afterSec = 5) {
+      const center = Date.now() - Math.max(0, offsetSec) * 1000;
+      return await apiRequest('car_data', {
+        session_key: sessionKey,
+        driver_number: driverNumber,
+        'date>=': new Date(center - beforeSec * 1000).toISOString(),
+        'date<=': new Date(center + afterSec * 1000).toISOString()
+      });
+    },
+
+    /**
      * Get recent car data points (used for polling live session)
      */
     async getRecentCarData(sessionKey, driverNumber, secondsBack = 15) {

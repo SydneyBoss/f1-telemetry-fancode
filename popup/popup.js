@@ -203,10 +203,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     accordionArrow.classList.toggle('open', isHidden);
   });
 
-  // Toggle HUD
+  // Toggle HUD (content scripts react via chrome.storage.onChanged, so it works on every open tab)
   toggleHud.addEventListener('change', () => {
     chrome.storage.local.set({ hudEnabled: toggleHud.checked });
-    sendTabMessage({ action: 'TOGGLE_HUD' });
   });
 
   // Driver 1 Change

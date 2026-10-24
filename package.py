@@ -28,6 +28,7 @@ def package():
         'content/hud.js',
         'content/hud.css',
         'content/openf1.js',
+        'demo.html',
         'popup/popup.html',
         'popup/popup.css',
         'popup/popup.js',
