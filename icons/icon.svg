@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="f1grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E10600"/>
+      <stop offset="100%" stop-color="#800000"/>
+    </linearGradient>
+    <linearGradient id="cyangrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00F0FF"/>
+      <stop offset="100%" stop-color="#00A3FF"/>
+    </linearGradient>
+  </defs>
+  <!-- Background Circle -->
+  <circle cx="64" cy="64" r="60" fill="#15151E" stroke="#E10600" stroke-width="4"/>
+  <!-- Steering wheel grips -->
+  <rect x="22" y="44" width="14" height="40" rx="7" fill="#2E2E38"/>
+  <rect x="92" y="44" width="14" height="40" rx="7" fill="#2E2E38"/>
+  <rect x="36" y="58" width="56" height="12" fill="#22222B"/>
+  <!-- Central screen with telemetry -->
+  <rect x="42" y="38" width="44" height="34" rx="4" fill="#0D0E12" stroke="#333" stroke-width="1.5"/>
+  <!-- Rev lights -->
+  <circle cx="48" cy="44" r="2.5" fill="#00FF66"/>
+  <circle cx="56" cy="44" r="2.5" fill="#00FF66"/>
+  <circle cx="64" cy="44" r="2.5" fill="#FF2D55"/>
+  <circle cx="72" cy="44" r="2.5" fill="#FF2D55"/>
+  <circle cx="80" cy="44" r="2.5" fill="#00E5FF"/>
+  <!-- Speed & Gear in screen -->
+  <text x="64" y="58" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="900" fill="#FFFFFF" text-anchor="middle">7</text>
+  <text x="64" y="68" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="7" font-weight="700" fill="#00F0FF" text-anchor="middle">315</text>
+  <!-- F1 speed streak bottom -->
+  <path d="M38 90 L80 90 L92 98 L30 98 Z" fill="url(#f1grad)"/>
+  <text x="61" y="96" font-family="Impact, sans-serif" font-size="7" font-style="italic" fill="#FFF" letter-spacing="1">TELEMETRY</text>
+</svg>

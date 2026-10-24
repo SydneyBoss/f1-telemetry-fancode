@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>F1 Telemetry HUD - FanCode Interactive Testbench</title>
+  <link rel="stylesheet" href="content/hud.css">
+  <style>
+    :root {
+      --bg: #090a0f;
+      --card-bg: #141721;
+      --border-color: rgba(255, 255, 255, 0.1);
+      --f1-red: #e10600;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #11141d;
+      border-bottom: 1px solid var(--border-color);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .f1-badge {
+      background: var(--f1-red);
+      color: #fff;
+      font-weight: 900;
+      font-size: 13px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      letter-spacing: 1px;
+    }
+
+    .title {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .tagline {
+      font-size: 12px;
+      color: #8b92a4;
+    }
+
+    .header-links a {
+      color: #00f0ff;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      margin-left: 16px;
+    }
+
+    main {
+      flex: 1;
+      padding: 24px;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .instructions-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .instructions-text h3 {
+      font-size: 14px;
+      margin-bottom: 4px;
+      color: #fff;
+    }
+
+    .instructions-text p {
+      font-size: 12px;
+      color: #9aa2b5;
+    }
+
+    .controls-pill-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .pill-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-color);
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .pill-btn:hover {
+      background: rgba(225, 6, 0, 0.3);
+      border-color: var(--f1-red);
+    }
+
+    /* Video Player Mock */
+    .player-wrapper {
+      position: relative;
+      width: 100%;
+      height: 640px;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    canvas#track-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .player-controls-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 12px 20px;
+      background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 10;
+      pointer-events: auto;
+    }
+
+    .player-title {
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      background: #ff1744;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #ff1744;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.5; }
+      50% { opacity: 1; }
+      100% { opacity: 0.5; }
+    }
+
+    .player-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-player {
+      background: rgba(255, 255, 255, 0.15);
+      border: none;
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .btn-player:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="f1-badge">F1 LIVE</div>
+      <div>
+        <div class="title">FanCode Telemetry HUD Testbench</div>
+        <div class="tagline">Draggable OpenF1 Broadcast Overlay Demo</div>
+      </div>
+    </div>
+    <div class="header-links">
+      <a href="https://openf1.org" target="_blank" rel="noopener">OpenF1 API Docs ↗</a>
+      <a href="https://fancode.com" target="_blank" rel="noopener">FanCode ↗</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="instructions-card">
+      <div class="instructions-text">
+        <h3>Interactive Demo Instructions</h3>
+        <p>• <strong>Drag the HUD</strong> by clicking and holding the top bar. Move it anywhere on the video screen.<br>
+           • <strong>Click the Driver Badge</strong> ("VER", "NOR", etc.) to select any driver from the session lineup.<br>
+           • <strong>Click the ⚙ Settings Gear</strong> on the HUD to adjust the stream delay offset or snap to Top-Left, Top-Right, etc.<br>
+           • <strong>Toggle Fullscreen</strong> below to test fullscreen behavior.
+        </p>
+      </div>
+      <div class="controls-pill-group">
+        <button class="pill-btn" id="btn-mock-t1">Simulate Turn 1 Braking</button>
+        <button class="pill-btn" id="btn-mock-straight">Simulate Main Straight DRS</button>
+        <button class="pill-btn" id="btn-mock-fullscreen">⛶ Test Fullscreen</button>
+      </div>
+    </div>
+
+    <!-- Simulated FanCode Video Player -->
+    <div class="player-wrapper" id="player-container">
+      <canvas id="track-canvas"></canvas>
+
+      <!-- Simulated Player Bar -->
+      <div class="player-controls-overlay">
+        <div class="player-title">
+          <span class="live-dot"></span>
+          <span>FANCODE LIVE • FORMULA 1 GRAND PRIX</span>
+        </div>
+        <div class="player-actions">
+          <button class="btn-player" id="btn-toggle-cam">Toggle Onboard Cam</button>
+          <button class="btn-player" id="btn-player-fs">⛶ Fullscreen</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- OpenF1 Client and HUD Scripts -->
+  <script src="content/openf1.js"></script>
+  <script src="content/hud.js"></script>
+
+  <!-- Canvas racetrack simulation animation -->
+  <script>
+    const canvas = document.getElementById('track-canvas');
+    const ctx = canvas.getContext('2d');
+    const container = document.getElementById('player-container');
+
+    function resizeCanvas() {
+      canvas.width = container.clientWidth;
+      canvas.height = container.clientHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    let onboardMode = true;
+    let frame = 0;
+
+    function renderCanvas() {
+      frame++;
+      const w = canvas.width;
+      const h = canvas.height;
+
+      // Draw asphalt / horizon
+      ctx.fillStyle = '#0f1118';
+      ctx.fillRect(0, 0, w, h);
+
+      // Sky / track scenery
+      const grad = ctx.createLinearGradient(0, 0, 0, h * 0.5);
+      grad.addColorStop(0, '#05070c');
+      grad.addColorStop(1, '#1a1f2c');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h * 0.5);
+
+      // Track surface
+      ctx.beginPath();
+      ctx.moveTo(w * 0.35, h * 0.5);
+      ctx.lineTo(w * 0.65, h * 0.5);
+      ctx.lineTo(w, h);
+      ctx.lineTo(0, h);
+      ctx.closePath();
+      ctx.fillStyle = '#1e222d';
+      ctx.fill();
+
+      // Curbs (Red and White vibrating)
+      const curbPhase = (frame * 12) % 60;
+      ctx.lineWidth = 14;
+      ctx.strokeStyle = curbPhase > 30 ? '#e10600' : '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(w * 0.35, h * 0.5);
+      ctx.lineTo(0, h);
+      ctx.stroke();
+
+      ctx.strokeStyle = curbPhase > 30 ? '#ffffff' : '#e10600';
+      ctx.beginPath();
+      ctx.moveTo(w * 0.65, h * 0.5);
+      ctx.lineTo(w, h);
+      ctx.stroke();
+
+      // Onboard Cockpit Halo Overlay
+      if (onboardMode) {
+        ctx.fillStyle = 'rgba(10, 10, 12, 0.9)';
+        // Halo central strut
+        ctx.beginPath();
+        ctx.moveTo(w * 0.485, h * 0.3);
+        ctx.lineTo(w * 0.515, h * 0.3);
+        ctx.lineTo(w * 0.52, h);
+        ctx.lineTo(w * 0.48, h);
+        ctx.closePath();
+        ctx.fill();
+
+        // Halo upper hoop
+        ctx.beginPath();
+        ctx.ellipse(w * 0.5, h * 0.28, w * 0.35, h * 0.12, 0, Math.PI, 0);
+        ctx.lineWidth = 26;
+        ctx.strokeStyle = '#1a1b20';
+        ctx.stroke();
+      }
+
+      // Watermark text in background
+      ctx.font = '900 24px Impact, sans-serif';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.fillText('FANCODE STREAM SIMULATION', 30, 60);
+
+      requestAnimationFrame(renderCanvas);
+    }
+    renderCanvas();
+
+    // Fullscreen buttons
+    const triggerFS = () => {
+      if (!document.fullscreenElement) {
+        container.requestFullscreen().catch(err => alert(`Fullscreen error: ${err.message}`));
+      } else {
+        document.exitFullscreen();
+      }
+    };
+
+    document.getElementById('btn-player-fs').addEventListener('click', triggerFS);
+    document.getElementById('btn-mock-fullscreen').addEventListener('click', triggerFS);
+
+    document.getElementById('btn-toggle-cam').addEventListener('click', () => {
+      onboardMode = !onboardMode;
+    });
+
+    // Quick Simulation Overrides
+    document.getElementById('btn-mock-t1').addEventListener('click', () => {
+      if (window.__F1_HUD_INITIALIZED__) {
+        // Trigger braking state
+        const thrFill = document.querySelector('#f1-throttle-fill');
+        const thrVal = document.querySelector('#f1-throttle-val');
+        const brkFill = document.querySelector('#f1-brake-fill');
+        const brkVal = document.querySelector('#f1-brake-val');
+        const gearEl = document.querySelector('#f1-gear-val');
+        const speedEl = document.querySelector('#f1-speed-val');
+        const drsEl = document.querySelector('#f1-drs-badge');
+        const rpmText = document.querySelector('#f1-rpm-text');
+
+        if (thrFill) thrFill.style.height = '0%';
+        if (thrVal) thrVal.textContent = '0%';
+        if (brkFill) brkFill.style.height = '100%';
+        if (brkVal) brkVal.textContent = '100%';
+        if (gearEl) gearEl.textContent = '2';
+        if (speedEl) speedEl.textContent = '84';
+        if (drsEl) { drsEl.className = 'f1-drs-badge'; drsEl.textContent = 'DRS OFF'; }
+        if (rpmText) rpmText.textContent = '10,400 RPM';
+
+        const leds = document.querySelectorAll('.f1-led');
+        leds.forEach((l, i) => {
+          l.className = 'f1-led' + (i < 6 ? ' lit-green' : '');
+        });
+      }
+    });
+
+    document.getElementById('btn-mock-straight').addEventListener('click', () => {
+      if (window.__F1_HUD_INITIALIZED__) {
+        const thrFill = document.querySelector('#f1-throttle-fill');
+        const thrVal = document.querySelector('#f1-throttle-val');
+        const brkFill = document.querySelector('#f1-brake-fill');
+        const brkVal = document.querySelector('#f1-brake-val');
+        const gearEl = document.querySelector('#f1-gear-val');
+        const speedEl = document.querySelector('#f1-speed-val');
+        const drsEl = document.querySelector('#f1-drs-badge');
+        const rpmText = document.querySelector('#f1-rpm-text');
+
+        if (thrFill) thrFill.style.height = '100%';
+        if (thrVal) thrVal.textContent = '100%';
+        if (brkFill) brkFill.style.height = '0%';
+        if (brkVal) brkVal.textContent = '0%';
+        if (gearEl) gearEl.textContent = '8';
+        if (speedEl) speedEl.textContent = '338';
+        if (drsEl) { drsEl.className = 'f1-drs-badge active'; drsEl.textContent = 'DRS ACTIVE'; }
+        if (rpmText) rpmText.textContent = '13,250 RPM';
+
+        const leds = document.querySelectorAll('.f1-led');
+        leds.forEach((l, i) => {
+          l.className = 'f1-led' + (i < 5 ? ' lit-green' : (i < 10 ? ' lit-red' : ' lit-blue'));
+        });
+      }
+    });
+  </script>
+</body>
+</html>

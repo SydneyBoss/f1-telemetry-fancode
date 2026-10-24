@@ -1,0 +1,55 @@
+{
+  "manifest_version": 3,
+  "name": "F1 Telemetry Overlay for FanCode",
+  "version": "1.0.0",
+  "description": "Real-time F1 car telemetry HUD overlay (Speed, Gear, RPM, Throttle, Brake, DRS) powered by OpenF1 API.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://api.openf1.org/*",
+    "*://*.fancode.com/*",
+    "*://localhost/*",
+    "*://127.0.0.1/*"
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": "icons/icon48.png",
+    "default_title": "F1 Telemetry Settings"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.fancode.com/*",
+        "*://localhost/*",
+        "*://127.0.0.1/*"
+      ],
+      "css": [
+        "content/hud.css"
+      ],
+      "js": [
+        "content/openf1.js",
+        "content/hud.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/*",
+        "content/hud.css"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

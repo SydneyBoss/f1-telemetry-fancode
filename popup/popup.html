@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>F1 Telemetry HUD Settings</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <header class="popup-header">
+      <div class="brand">
+        <span class="f1-stripe"></span>
+        <div class="title-group">
+          <h1>F1 TELEMETRY</h1>
+          <span class="sub">FanCode Live HUD</span>
+        </div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="toggle-hud" checked>
+        <span class="slider round"></span>
+      </label>
+    </header>
+
+    <!-- Session Status -->
+    <div class="session-card">
+      <div class="session-label">Current Session</div>
+      <div class="session-title" id="session-title">Connecting to OpenF1...</div>
+      <div class="session-meta" id="session-meta">Fetching latest weekend data</div>
+    </div>
+
+    <!-- Active Driver -->
+    <div class="section-title">ACTIVE DRIVER</div>
+    <div class="driver-select-container">
+      <select id="driver-select">
+        <option value="">Loading drivers...</option>
+      </select>
+    </div>
+
+    <!-- Stream Delay Sync Offset -->
+    <div class="section-title">
+      <span>FANCODE SYNC OFFSET</span>
+      <span class="offset-badge" id="offset-display">0s</span>
+    </div>
+    <div class="sync-controls">
+      <button class="nudge-btn" id="btn-sub-5">-5s</button>
+      <button class="nudge-btn" id="btn-sub-1">-1s</button>
+      <input type="range" id="sync-slider" min="-60" max="60" value="0" step="1">
+      <button class="nudge-btn" id="btn-add-1">+1s</button>
+      <button class="nudge-btn" id="btn-add-5">+5s</button>
+    </div>
+    <div class="hint">Adjust if FanCode broadcast is delayed behind track timing.</div>
+
+    <!-- Dock Presets -->
+    <div class="section-title">HUD SCREEN POSITION</div>
+    <div class="dock-grid">
+      <button class="dock-btn" data-pos="pos-top-left">Top Left</button>
+      <button class="dock-btn" data-pos="pos-top-center">Top Mid</button>
+      <button class="dock-btn active" data-pos="pos-top-right">Top Right</button>
+      <button class="dock-btn" data-pos="pos-bottom-left">Bottom Left</button>
+      <button class="dock-btn" data-pos="pos-bottom-right">Bottom Right</button>
+    </div>
+
+    <!-- Actions / Links -->
+    <footer class="popup-footer">
+      <button class="action-btn" id="btn-open-demo">Launch Interactive Demo</button>
+    </footer>
+  </div>
+
+  <script src="../content/openf1.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

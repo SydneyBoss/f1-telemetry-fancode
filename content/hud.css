@@ -1,0 +1,563 @@
+/* F1 Car Telemetry Overlay HUD - FanCode Broadcast Style */
+
+:root {
+  --f1-red: #e10600;
+  --f1-dark: #12141a;
+  --f1-dark-glass: rgba(18, 20, 26, 0.88);
+  --f1-border: rgba(255, 255, 255, 0.12);
+  --f1-border-accent: rgba(225, 6, 0, 0.4);
+  --f1-text: #ffffff;
+  --f1-text-muted: #8b929e;
+  --f1-throttle: #00e676;
+  --f1-throttle-glow: rgba(0, 230, 118, 0.4);
+  --f1-brake: #ff1744;
+  --f1-brake-glow: rgba(255, 23, 68, 0.4);
+  --f1-drs-active: #00f0ff;
+  --f1-led-green: #00e676;
+  --f1-led-red: #ff3b30;
+  --f1-led-blue: #007aff;
+  --f1-team-color: #e10600;
+}
+
+#f1-telemetry-hud-root {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2147483647; /* Highest z-index on video player */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+  box-sizing: border-box;
+  color: var(--f1-text);
+  line-height: 1.2;
+}
+
+#f1-telemetry-hud-root * {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Floating HUD Container */
+.f1-hud-container {
+  position: fixed;
+  pointer-events: auto;
+  width: 330px;
+  background: var(--f1-dark-glass);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-radius: 12px;
+  border: 1px solid var(--f1-border);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  transition: opacity 0.2s ease, width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Preset Positions */
+.f1-hud-container.pos-top-left {
+  top: 24px;
+  left: 24px;
+  right: auto;
+  bottom: auto;
+}
+
+.f1-hud-container.pos-top-right {
+  top: 24px;
+  right: 24px;
+  left: auto;
+  bottom: auto;
+}
+
+.f1-hud-container.pos-bottom-left {
+  bottom: 60px;
+  left: 24px;
+  top: auto;
+  right: auto;
+}
+
+.f1-hud-container.pos-bottom-right {
+  bottom: 60px;
+  right: 24px;
+  top: auto;
+  left: auto;
+}
+
+.f1-hud-container.pos-top-center {
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  right: auto;
+  bottom: auto;
+}
+
+/* Top Draggable Header */
+.f1-hud-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.45);
+  border-bottom: 1px solid var(--f1-border);
+  cursor: grab;
+  position: relative;
+}
+
+.f1-hud-header:active {
+  cursor: grabbing;
+}
+
+.f1-team-stripe {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: var(--f1-team-color);
+  box-shadow: 0 0 8px var(--f1-team-color);
+  transition: background-color 0.3s ease;
+}
+
+.f1-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 6px;
+}
+
+.f1-drag-icon {
+  width: 14px;
+  height: 14px;
+  opacity: 0.6;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+}
+
+.f1-drag-icon span {
+  display: block;
+  height: 2px;
+  background: var(--f1-text-muted);
+  border-radius: 1px;
+}
+
+/* Driver Selector Badge */
+.f1-driver-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.f1-driver-badge:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.f1-driver-num {
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--f1-team-color);
+}
+
+.f1-driver-code {
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+
+.f1-driver-arrow {
+  font-size: 9px;
+  opacity: 0.6;
+}
+
+/* Header Controls */
+.f1-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.f1-btn-icon {
+  background: transparent;
+  border: none;
+  color: var(--f1-text-muted);
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.f1-btn-icon:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+/* Driver Selection Dropdown Overlay */
+.f1-driver-dropdown {
+  display: none;
+  position: absolute;
+  top: 42px;
+  left: 8px;
+  right: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  background: #181a22;
+  border: 1px solid var(--f1-border);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+  z-index: 100;
+  padding: 4px;
+}
+
+.f1-driver-dropdown.active {
+  display: block;
+}
+
+.f1-driver-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  gap: 8px;
+  transition: background 0.15s;
+  font-size: 12px;
+}
+
+.f1-driver-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.f1-driver-item.selected {
+  background: rgba(225, 6, 0, 0.25);
+  font-weight: bold;
+}
+
+.f1-driver-item-color {
+  width: 4px;
+  height: 16px;
+  border-radius: 2px;
+}
+
+.f1-driver-item-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.f1-driver-item-team {
+  font-size: 11px;
+  color: var(--f1-text-muted);
+}
+
+/* RPM Shift Lights Bar */
+.f1-rpm-section {
+  padding: 10px 14px 4px 14px;
+}
+
+.f1-led-bar {
+  display: flex;
+  gap: 4px;
+  justify-content: space-between;
+}
+
+.f1-led {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  transition: background 0.05s ease, box-shadow 0.05s ease;
+}
+
+/* LED Lit States */
+.f1-led.lit-green {
+  background: var(--f1-led-green);
+  box-shadow: 0 0 6px var(--f1-led-green);
+}
+
+.f1-led.lit-red {
+  background: var(--f1-led-red);
+  box-shadow: 0 0 6px var(--f1-led-red);
+}
+
+.f1-led.lit-blue {
+  background: var(--f1-led-blue);
+  box-shadow: 0 0 8px var(--f1-led-blue);
+}
+
+.f1-rpm-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--f1-text-muted);
+  margin-top: 4px;
+  font-family: monospace;
+}
+
+/* Main Telemetry Body */
+.f1-telemetry-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px 12px 14px;
+  gap: 12px;
+}
+
+/* Speed & Gear Central Display */
+.f1-center-metrics {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 14px;
+}
+
+.f1-gear-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.f1-gear-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  color: var(--f1-text-muted);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.f1-gear-val {
+  font-size: 42px;
+  font-weight: 900;
+  font-family: "Impact", "Arial Black", sans-serif;
+  color: #fff;
+  line-height: 1;
+  min-width: 32px;
+  text-align: center;
+}
+
+.f1-speed-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.f1-speed-val {
+  font-size: 48px;
+  font-weight: 900;
+  font-family: "Impact", "Arial Black", sans-serif;
+  letter-spacing: 1px;
+  line-height: 0.95;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  min-width: 86px;
+}
+
+.f1-speed-unit {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--f1-text-muted);
+  letter-spacing: 1px;
+  margin-top: 2px;
+}
+
+/* Pedals (Throttle & Brake) */
+.f1-pedals-box {
+  display: flex;
+  gap: 10px;
+}
+
+.f1-pedal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.f1-pedal-track {
+  width: 14px;
+  height: 60px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.f1-pedal-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  border-radius: 3px;
+  transition: height 0.06s linear;
+}
+
+.f1-pedal-fill.throttle {
+  background: linear-gradient(to top, #00b0ff, var(--f1-throttle));
+  box-shadow: 0 0 10px var(--f1-throttle-glow);
+}
+
+.f1-pedal-fill.brake {
+  background: linear-gradient(to top, #ff5252, var(--f1-brake));
+  box-shadow: 0 0 10px var(--f1-brake-glow);
+}
+
+.f1-pedal-name {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--f1-text-muted);
+}
+
+.f1-pedal-val {
+  font-size: 9px;
+  font-weight: 700;
+  font-family: monospace;
+}
+
+/* DRS & Status Bar */
+.f1-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 14px;
+  background: rgba(0, 0, 0, 0.35);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 11px;
+}
+
+.f1-drs-badge {
+  font-weight: 800;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--f1-text-muted);
+  transition: all 0.2s ease;
+}
+
+.f1-drs-badge.active {
+  background: var(--f1-drs-active);
+  color: #000;
+  box-shadow: 0 0 10px var(--f1-drs-active);
+  animation: drs-pulse 1s infinite alternate;
+}
+
+.f1-drs-badge.avail {
+  background: #ff9100;
+  color: #000;
+}
+
+@keyframes drs-pulse {
+  from { opacity: 0.85; }
+  to { opacity: 1; }
+}
+
+.f1-session-tag {
+  color: var(--f1-text-muted);
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+/* Settings / Sync Drawer */
+.f1-settings-panel {
+  display: none;
+  padding: 10px 14px;
+  background: rgba(14, 16, 21, 0.95);
+  border-top: 1px solid var(--f1-border);
+  font-size: 11px;
+}
+
+.f1-settings-panel.active {
+  display: block;
+}
+
+.f1-control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.f1-control-row label {
+  color: var(--f1-text-muted);
+  font-weight: 600;
+}
+
+.f1-stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.f1-stepper input[type="range"] {
+  width: 100px;
+  accent-color: var(--f1-red);
+  cursor: pointer;
+}
+
+.f1-stepper-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #fff;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.f1-stepper-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.f1-preset-dock-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.f1-dock-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ccc;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.f1-dock-btn:hover, .f1-dock-btn.active {
+  background: rgba(225, 6, 0, 0.4);
+  color: #fff;
+  border-color: var(--f1-red);
+}
+
+/* Compact / Minimized Mode */
+.f1-hud-container.minimized {
+  width: auto;
+}
+
+.f1-hud-container.minimized .f1-rpm-section,
+.f1-hud-container.minimized .f1-telemetry-body,
+.f1-hud-container.minimized .f1-status-bar,
+.f1-hud-container.minimized .f1-settings-panel {
+  display: none !important;
+}
